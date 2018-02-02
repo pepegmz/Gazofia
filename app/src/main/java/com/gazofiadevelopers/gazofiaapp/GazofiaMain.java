@@ -2,6 +2,7 @@ package com.gazofiadevelopers.gazofiaapp;
 
 import android.*;
 import android.Manifest;
+import android.animation.Animator;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -23,7 +24,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -49,6 +53,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.loopj.android.http.FileAsyncHttpResponseHandler;
+import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
 import org.json.JSONArray;
 
@@ -66,6 +71,10 @@ public class GazofiaMain extends AppCompatActivity
         implements OnMapReadyCallback {
 
     ProgressDialog progressDialog;
+    private boolean isOpen = false;
+    private SlidingUpPanelLayout layoutMain;
+    private RelativeLayout layoutButtons;
+    private RelativeLayout layoutContent;
 
     private static final String TAG = GazofiaMain.class.getSimpleName();
     private GoogleMap mMap;
@@ -127,6 +136,11 @@ public class GazofiaMain extends AppCompatActivity
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+
+        layoutMain = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
+        layoutButtons = (RelativeLayout) findViewById(R.id.layoutButtons);
+        layoutContent = (RelativeLayout) findViewById(R.id.layoutContent);
+
     }
 
     /**
@@ -162,7 +176,8 @@ public class GazofiaMain extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.option_get_place) {
-            showCurrentPlace();
+            // showCurrentPlace();
+            viewMenu();
         }
         return true;
     }
@@ -210,6 +225,8 @@ public class GazofiaMain extends AppCompatActivity
 
                 TextView snippet = ((TextView) infoWindow.findViewById(R.id.snippet));
                 snippet.setText(marker.getSnippet());
+
+
 
                 return infoWindow;
             }
@@ -470,7 +487,7 @@ public class GazofiaMain extends AppCompatActivity
 
 // modify canvas
         canvas1.drawBitmap(BitmapFactory.decodeResource(getResources(),
-                R.drawable.fuel_green), 0,0, color);
+                R.drawable.fuel_green_mini), 0,0, color);
         canvas1.drawText("User Name!", 30, 40, color);
 
 // add marker to Map
@@ -711,5 +728,64 @@ public class GazofiaMain extends AppCompatActivity
 
 
         });
+    }
+
+    private void viewMenu() {
+
+        if (!isOpen) {
+
+            int x = layoutContent.getRight();
+            int y = layoutContent.getTop();
+
+            int startRadius = 0;
+            int endRadius = (int) Math.hypot(layoutMain.getWidth(), layoutMain.getHeight());
+
+            // fab.setBackgroundTintList(ColorStateList.valueOf(ResourcesCompat.getColor(getResources(),android.R.color.white,null)));
+            // fab.setImageResource(R.drawable.ic_close_grey);
+
+            Animator anim = ViewAnimationUtils.createCircularReveal(layoutButtons, x, y, startRadius, endRadius);
+
+            layoutButtons.setVisibility(View.VISIBLE);
+            anim.start();
+
+            isOpen = true;
+
+        } else {
+
+            int x = layoutButtons.getRight();
+            int y = layoutButtons.getTop();
+
+            int startRadius = Math.max(layoutContent.getWidth(), layoutContent.getHeight());
+            int endRadius = 0;
+
+            // fab.setBackgroundTintList(ColorStateList.valueOf(ResourcesCompat.getColor(getResources(),R.color.colorAccent,null)));
+            // fab.setImageResource(R.drawable.ic_plus_white);
+
+            Animator anim = ViewAnimationUtils.createCircularReveal(layoutButtons, x, y, startRadius, endRadius);
+            anim.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animator) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animator) {
+                    layoutButtons.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animator) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animator) {
+
+                }
+            });
+            anim.start();
+
+            isOpen = false;
+        }
     }
 }
