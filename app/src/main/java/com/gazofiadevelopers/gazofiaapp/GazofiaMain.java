@@ -1,6 +1,5 @@
 package com.gazofiadevelopers.gazofiaapp;
 
-import android.*;
 import android.Manifest;
 import android.animation.Animator;
 import android.app.ProgressDialog;
@@ -26,12 +25,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.gazofiadevelopers.gazofiaapp.data.AsyncHttpClientManagement;
+import com.gazofiadevelopers.gazofiaapp.data.CustomMark;
 import com.gazofiadevelopers.gazofiaapp.data.Vars;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -64,11 +63,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import cz.msebera.android.httpclient.Header;
 
 public class GazofiaMain extends AppCompatActivity
-        implements OnMapReadyCallback {
+        implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener{
+
+    ArrayList<CustomMark> markers = new ArrayList<>();
+    TextView info_magna, info_premium, info_diesel;
 
     ProgressDialog progressDialog;
     private boolean isOpen = false;
@@ -140,7 +143,6 @@ public class GazofiaMain extends AppCompatActivity
         layoutMain = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
         layoutButtons = (RelativeLayout) findViewById(R.id.layoutButtons);
         layoutContent = (RelativeLayout) findViewById(R.id.layoutContent);
-
     }
 
     /**
@@ -217,14 +219,26 @@ public class GazofiaMain extends AppCompatActivity
             @Override
             public View getInfoContents(Marker marker) {
                 // Inflate the layouts for the info window, title and snippet.
-                View infoWindow = getLayoutInflater().inflate(R.layout.custom_info_contents,
+                View infoWindow = getLayoutInflater().inflate(R.layout.mark_info_content,
                         (FrameLayout) findViewById(R.id.map), false);
 
-                TextView title = ((TextView) infoWindow.findViewById(R.id.title));
-                title.setText(marker.getTitle());
+                CustomMark mark = markers.get(Integer.parseInt(marker.getTag().toString()));
 
-                TextView snippet = ((TextView) infoWindow.findViewById(R.id.snippet));
-                snippet.setText(marker.getSnippet());
+                info_magna = ((TextView) infoWindow.findViewById(R.id.info_green_price));
+                info_premium = ((TextView) infoWindow.findViewById(R.id.info_red_price));
+                info_diesel = ((TextView) infoWindow.findViewById(R.id.info_black_price));
+
+
+                info_premium.setText(mark.getPremium());
+                info_magna.setText(mark.getMagna());
+                info_diesel.setText(mark.getDiesel());
+
+
+                // TextView title = ((TextView) infoWindow.findViewById(R.id.title));
+                // title.setText(marker.getTitle());
+
+                // TextView snippet = ((TextView) infoWindow.findViewById(R.id.snippet));
+                // snippet.setText(marker.getSnippet());
 
 
 
@@ -240,6 +254,8 @@ public class GazofiaMain extends AppCompatActivity
 
         // Get the current location of the device and set the position of the map.
         getDeviceLocation();
+
+        this.mMap.setOnMarkerClickListener(this);
 
         progressDialog = new ProgressDialog(GazofiaMain.this,
                 R.style.AppTheme_Dark_Dialog);
@@ -549,6 +565,7 @@ public class GazofiaMain extends AppCompatActivity
 
     public void getNegoVerificacion(){
         progressDialog.setMessage("Cargando datos... Nego Verificacion");
+        final String type = "NV";
         AsyncHttpClientManagement.get(Vars.NEGV, null, new FileAsyncHttpResponseHandler(getApplicationContext()) {
 
             @Override
@@ -563,18 +580,37 @@ public class GazofiaMain extends AppCompatActivity
                     for(int i = 0;i<array.length();i++){
                         // Log.i("item", array.getJSONObject(i).getString("id"));
 
+
+
+
                         if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")){
+
+                            String id = array.getJSONObject(i).getString("id");
+                            LatLng latLng = new LatLng( Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0)));
+                            String magna = array.getJSONObject(i).getJSONObject("properties").getString("MAGNA");
+                            String premium = array.getJSONObject(i).getJSONObject("properties").getString("PREMIUM");
+                            String diesel = array.getJSONObject(i).getJSONObject("properties").getString("DIESEL");
+                            String colonia = array.getJSONObject(i).getJSONObject("properties").getString("COLONIA");
+                            String calle = array.getJSONObject(i).getJSONObject("properties").getString("CALLE");
+                            String municipio = array.getJSONObject(i).getJSONObject("properties").getString("MUNICIPIO");
+                            String estado = array.getJSONObject(i).getJSONObject("properties").getString("ESTADO");
+
+
+
                             mMap.addMarker(new MarkerOptions()
-                                    .position(new LatLng( Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0))))
-                                    .title("M: " + array.getJSONObject(i).getJSONObject("properties").get("MAGNA") + "\n" + "P: " + array.getJSONObject(i).getJSONObject("properties").get("PREMIUM") + "\n" + "D: " + array.getJSONObject(i).getJSONObject("properties").get("DIESEL"))
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_orange_mini)));
+                                    .position(latLng)
+                                    .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_orange_mini))).setTag(markers.size());
+
+                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
-
-
                     }
+
+                    // progressDialog.dismiss();
 
                 } catch (Exception e) {
                     progressDialog.dismiss();
+                    Log.w("error-marks", e);
                     Toast.makeText(getApplicationContext(), "No es posible obtener los datos de Nego Verificacion", Toast.LENGTH_LONG).show();
                     e.printStackTrace();
 
@@ -596,6 +632,7 @@ public class GazofiaMain extends AppCompatActivity
     }
 
     public void getSinVerificar(){
+        final String type = "SV";
         progressDialog.setMessage("Cargando datos... Sin Verificar");
         AsyncHttpClientManagement.get(Vars.SVER, null, new FileAsyncHttpResponseHandler(getApplicationContext()) {
 
@@ -611,11 +648,30 @@ public class GazofiaMain extends AppCompatActivity
 
                     for(int i = 0;i<array.length();i++){
                         // Log.i("item", array.getJSONObject(i).getString("id"));
-                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")) {
+
+
+
+
+                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")){
+
+                            String id = array.getJSONObject(i).getString("id");
+                            LatLng latLng = new LatLng( Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0)));
+                            String magna = array.getJSONObject(i).getJSONObject("properties").getString("MAGNA");
+                            String premium = array.getJSONObject(i).getJSONObject("properties").getString("PREMIUM");
+                            String diesel = array.getJSONObject(i).getJSONObject("properties").getString("DIESEL");
+                            String colonia = array.getJSONObject(i).getJSONObject("properties").getString("COLONIA");
+                            String calle = array.getJSONObject(i).getJSONObject("properties").getString("CALLE");
+                            String municipio = array.getJSONObject(i).getJSONObject("properties").getString("MUNICIPIO");
+                            String estado = array.getJSONObject(i).getJSONObject("properties").getString("ESTADO");
+
+
+
                             mMap.addMarker(new MarkerOptions()
-                                    .position(new LatLng(Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0))))
-                                    .title("M: " + array.getJSONObject(i).getJSONObject("properties").get("MAGNA") + "\n" + "P: " + array.getJSONObject(i).getJSONObject("properties").get("PREMIUM") + "\n" + "D: " + array.getJSONObject(i).getJSONObject("properties").get("DIESEL"))
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_yellow_mini)));
+                                    .position(latLng)
+                                    .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_yellow_mini))).setTag(markers.size());
+
+                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -641,6 +697,7 @@ public class GazofiaMain extends AppCompatActivity
     }
 
     public void getConAnomalias(){
+        final String type = "CA";
         progressDialog.setMessage("Cargando datos... Con Anomalias...");
         AsyncHttpClientManagement.get(Vars.CANOM, null, new FileAsyncHttpResponseHandler(getApplicationContext()) {
 
@@ -656,11 +713,30 @@ public class GazofiaMain extends AppCompatActivity
 
                     for(int i = 0;i<array.length();i++){
                         // Log.i("item", array.getJSONObject(i).getString("id"));
-                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")) {
+
+
+
+
+                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")){
+
+                            String id = array.getJSONObject(i).getString("id");
+                            LatLng latLng = new LatLng( Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0)));
+                            String magna = array.getJSONObject(i).getJSONObject("properties").getString("MAGNA");
+                            String premium = array.getJSONObject(i).getJSONObject("properties").getString("PREMIUM");
+                            String diesel = array.getJSONObject(i).getJSONObject("properties").getString("DIESEL");
+                            String colonia = array.getJSONObject(i).getJSONObject("properties").getString("COLONIA");
+                            String calle = array.getJSONObject(i).getJSONObject("properties").getString("CALLE");
+                            String municipio = array.getJSONObject(i).getJSONObject("properties").getString("MUNICIPIO");
+                            String estado = array.getJSONObject(i).getJSONObject("properties").getString("ESTADO");
+
+
+
                             mMap.addMarker(new MarkerOptions()
-                                    .position(new LatLng(Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0))))
-                                    .title("M: " + array.getJSONObject(i).getJSONObject("properties").get("MAGNA") + "\n" + "P: " + array.getJSONObject(i).getJSONObject("properties").get("PREMIUM") + "\n" + "D: " + array.getJSONObject(i).getJSONObject("properties").get("DIESEL"))
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_red_mini)));
+                                    .position(latLng)
+                                    .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_red_mini))).setTag(markers.size());
+
+                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -686,6 +762,7 @@ public class GazofiaMain extends AppCompatActivity
     }
 
     public void getSinAnomalias(){
+        final String type = "SA";
         progressDialog.setMessage("Cargando datos... Sin Anomalias");
         AsyncHttpClientManagement.get(Vars.SANOM, null, new FileAsyncHttpResponseHandler(getApplicationContext()) {
 
@@ -702,11 +779,30 @@ public class GazofiaMain extends AppCompatActivity
 
                     for(int i = 0;i<array.length();i++){
                         // Log.i("item", array.getJSONObject(i).getString("id"));
-                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")) {
+
+
+
+
+                        if (array.getJSONObject(i).getJSONObject("properties").get("MUNICIPIO").equals("Aguascalientes")){
+
+                            String id = array.getJSONObject(i).getString("id");
+                            LatLng latLng = new LatLng( Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0)));
+                            String magna = array.getJSONObject(i).getJSONObject("properties").getString("MAGNA");
+                            String premium = array.getJSONObject(i).getJSONObject("properties").getString("PREMIUM");
+                            String diesel = array.getJSONObject(i).getJSONObject("properties").getString("DIESEL");
+                            String colonia = array.getJSONObject(i).getJSONObject("properties").getString("COLONIA");
+                            String calle = array.getJSONObject(i).getJSONObject("properties").getString("CALLE");
+                            String municipio = array.getJSONObject(i).getJSONObject("properties").getString("MUNICIPIO");
+                            String estado = array.getJSONObject(i).getJSONObject("properties").getString("ESTADO");
+
+
+
                             mMap.addMarker(new MarkerOptions()
-                                    .position(new LatLng(Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(1)), Double.parseDouble(array.getJSONObject(i).getJSONObject("geometry").getJSONArray("coordinates").getString(0))))
-                                    .title("M: " + array.getJSONObject(i).getJSONObject("properties").get("MAGNA") + "\n" + "P: " + array.getJSONObject(i).getJSONObject("properties").get("PREMIUM") + "\n" + "D: " + array.getJSONObject(i).getJSONObject("properties").get("DIESEL"))
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_green_mini)));
+                                    .position(latLng)
+                                    .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_green_mini))).setTag(markers.size());
+
+                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -787,5 +883,15 @@ public class GazofiaMain extends AppCompatActivity
 
             isOpen = false;
         }
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+
+        // CustomMark mark = markers.get(Integer.parseInt(marker.getTag().toString()));
+
+        marker.showInfoWindow();
+
+        return true;
     }
 }
