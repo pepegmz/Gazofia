@@ -25,6 +25,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,6 +44,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -71,7 +73,8 @@ public class GazofiaMain extends AppCompatActivity
         implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener{
 
     ArrayList<CustomMark> markers = new ArrayList<>();
-    TextView info_magna, info_premium, info_diesel;
+    TextView info_magna, info_premium, info_diesel, gAddress, gStatus, pPremium, pDiesel, pMagna;
+    ImageView gType;
 
     ProgressDialog progressDialog;
     private boolean isOpen = false;
@@ -124,6 +127,16 @@ public class GazofiaMain extends AppCompatActivity
 
         // Retrieve the content view that renders the map.
         setContentView(R.layout.activity_gazofia_main);
+
+        //dev ref menu:
+        gAddress = ((TextView) findViewById(R.id.txt_address));
+        gStatus = ((TextView) findViewById(R.id.txt_status_gstation));
+        gType = ((ImageView) findViewById(R.id.img_type_gstation));
+
+        pPremium = ((TextView) findViewById(R.id.txt_price_premium));
+        pDiesel = ((TextView) findViewById(R.id.txt_price_diesel));
+        pMagna = ((TextView) findViewById(R.id.txt_price_magnum));
+
 
         // Construct a GeoDataClient.
         mGeoDataClient = Places.getGeoDataClient(this, null);
@@ -256,6 +269,8 @@ public class GazofiaMain extends AppCompatActivity
         getDeviceLocation();
 
         this.mMap.setOnMarkerClickListener(this);
+
+        // mMap.getUiSettings().setMapToolbarEnabled(false);
 
         progressDialog = new ProgressDialog(GazofiaMain.this,
                 R.style.AppTheme_Dark_Dialog);
@@ -602,7 +617,7 @@ public class GazofiaMain extends AppCompatActivity
                                     .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_orange_mini))).setTag(markers.size());
 
-                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
+                            markers.add(new CustomMark(id, type, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -671,7 +686,7 @@ public class GazofiaMain extends AppCompatActivity
                                     .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_yellow_mini))).setTag(markers.size());
 
-                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
+                            markers.add(new CustomMark(id, type, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -736,7 +751,7 @@ public class GazofiaMain extends AppCompatActivity
                                     .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_red_mini))).setTag(markers.size());
 
-                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
+                            markers.add(new CustomMark(id, type, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -802,7 +817,7 @@ public class GazofiaMain extends AppCompatActivity
                                     .title("M: " + magna + "\n" + "P: " + premium + "\n" + "D: " + diesel)
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuel_green_mini))).setTag(markers.size());
 
-                            markers.add(new CustomMark(id, null, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
+                            markers.add(new CustomMark(id, type, latLng, premium, magna, diesel, null, colonia, calle,municipio, null));
                         }
                     }
 
@@ -888,10 +903,42 @@ public class GazofiaMain extends AppCompatActivity
     @Override
     public boolean onMarkerClick(Marker marker) {
 
-        // CustomMark mark = markers.get(Integer.parseInt(marker.getTag().toString()));
+        CustomMark mark = markers.get(Integer.parseInt(marker.getTag().toString()));
+        gAddress.setText(mark.getCalle() + " " + mark.getColonia() + " " + mark.getMunicipio());
+        setImageStatus(this.gStatus, this.gType, mark.getType());
+        pPremium.setText(mark.getPremium());
+        pMagna.setText(mark.getMagna());
+        pDiesel.setText(mark.getDiesel());
 
         marker.showInfoWindow();
 
-        return true;
+        return false;
     }
+
+    public void setImageStatus(TextView sName, ImageView imageView, String status){
+        switch (status){
+            case "SA":
+                sName.setText("Sin Anomalias");
+                imageView.setImageResource(R.drawable.fuel_mark_green);
+                break;
+            case "CA":
+                sName.setText("Con Anomalias");
+                imageView.setImageResource(R.drawable.fuel_mark_red);
+                break;
+            case "NV":
+                sName.setText("Nego Verificacion");
+                imageView.setImageResource(R.drawable.fuel_mark_orange);
+                break;
+            case "SV":
+                sName.setText("Sin Verificacion");
+                imageView.setImageResource(R.drawable.fuel_yellow_mini);
+                break;
+                default:
+                    break;
+
+        }
+
+    }
+
+
 }
